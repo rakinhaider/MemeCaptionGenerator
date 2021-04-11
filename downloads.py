@@ -5,7 +5,7 @@ import gzip
 import shutil
 import argparse
 import zipfile
-import requests
+import git
 
 
 def download_word_embedding(args):
@@ -22,18 +22,17 @@ def download_word_embedding(args):
             with open(dir_path + name, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
-def download_memes(args):
-    url = 'https://minhaskamal.github.io/DownGit/#/home?' \
-          'url=https://github.com/alpv95/MemeProject/tree/master/im2txt/ops&file_name=ops.zip'
-    r = requests.get(url, allow_redirects=True)
-    print(r)
-    file_name = os.path.join(args.data, 'ops.zip')
-    f = open(file_name, 'wb')
-    f.write(r.content)
-    f.close()
 
-    with zipfile.ZipFile(file_name, "r") as zip_ref:
-        zip_ref.extractall(args.data)
+def download_memes(args):
+    # The Git folder need to be cloned and cleaned.
+    url = 'https://github.com/alpv95/MemeProject.git'
+    repo = git.Repo.clone_from(url, os.path.join('data/repo/', 'repo'), branch='master')
+
+    heads = repo.heads
+    master = heads.master  # lists can be accessed by name for convenience
+    master.commit  # the commit pointed to by head called master
+    master.rename('new_name')  # rename heads
+    master.rename('master')
 
 
 def download_captions(args):

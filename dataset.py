@@ -1,4 +1,4 @@
-class MemeDataset():
+class MemeDataset(object):
     def __init__(self, image_dir, caption_path):
         self.image_dir = image_dir
         self.caption_path = caption_path
