@@ -1,0 +1,7 @@
+.idea/*
+
+data/test_*
+data/memes/*
+data/GoogleNews-vectors-negative300*
+
+**/*pycache*/*
