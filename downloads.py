@@ -8,23 +8,32 @@ import zipfile
 import git
 
 
+def download_file(base_url, file_name, out_dir_name):
+    os.makedirs(out_dir_name, exist_ok=True)
+    if not os.path.exists(out_dir_name + file_name):
+        filename = wget.download(base_url + file_name,
+                                 out=out_dir_name + file_name,
+                                 bar=bar_adaptive)
+    else:
+        pass
+
+
 def download_word_embedding(args):
     base_url = 'https://s3.amazonaws.com/dl4j-distribution/'
     name = 'GoogleNews-vectors-negative300.bin'
-    dir_path = args.data
-    os.makedirs(dir_path, exist_ok=True)
-    if not os.path.exists(dir_path + name + '.gz'):
-        filename = wget.download(base_url + name + '.gz',
-                                 out=dir_path + name + '.gz',
-                                 bar=bar_adaptive)
-    elif not os.path.exists(dir_path + name):
-        with gzip.open(dir_path + name + '.gz', 'rb') as f_in:
-            with open(dir_path + name, 'wb') as f_out:
+    dir_name = args.data
+    download_file(base_url, name + '.gz', dir_name)
+    if not os.path.exists(dir_name + name):
+        with gzip.open(dir_name + name + '.gz', 'rb') as f_in:
+            with open(dir_name + name, 'wb') as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
 
 def download_memes(args):
     # The Git folder need to be cloned and cleaned.
+    # This code doesn't work. Wanted to clone the previous
+    # repo rather than pushing all memes in remote.
+    exit()
     url = 'https://github.com/alpv95/MemeProject.git'
     repo = git.Repo.clone_from(url, os.path.join('data/repo/', 'repo'), branch='master')
 
@@ -36,7 +45,14 @@ def download_memes(args):
 
 
 def download_captions(args):
-    pass
+    # Should download captions here.
+    base_url = 'https://raw.githubusercontent.com/alpv95/' \
+               'MemeProject/master/im2txt/'
+    name = 'Captions.txt'
+    dir_name = args.data
+    download_file(base_url, name, dir_name)
+    name = 'CaptionsClean.txt'
+    download_file(base_url, name, dir_name)
 
 
 if __name__ == "__main__":

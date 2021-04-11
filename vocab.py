@@ -23,6 +23,67 @@ def get_contractor(data_dir):
     print('Contraction Loaded.')
     return cont
 
+def sbatch_submit(args):
+    r"""
+    Submit by `sbatch`.
+
+    Args
+    ----
+
+    Returns
+    -------
+    """
+    # /
+    # ANNOTATE
+    # /
+
+    # Initialize sbatch submission file.
+    sbatch_lines = ["#!/bin/bash"]
+
+    # Hardware resources.
+    sbatch_lines.append("#SBATCH -A gpu")
+    sbatch_lines.append("#SBATCH --gres=gpu:1")
+    sbatch_lines.append(
+        "#SBATCH --cpus-per-task={:d}".format(2),
+    )
+    sbatch_lines.append("#SBATCH --nodes=1")
+
+    # Time limit.
+    sbatch_lines.append("#SBATCH --job-name {:s}".format('vocab'))
+    sbatch_lines.append("#SBATCH --time=30:00")
+
+    # IO redirection.
+    sbatch_lines.append(
+        "#SBATCH --output {:s}".format(
+            os.path.join(args.data, "vocab_output"),
+        ),
+    )
+    sbatch_lines.append(
+        "#SBATCH --error {:s}".format(
+            os.path.join(args.data, "vocab_error"),
+        ),
+    )
+
+    # Python script.
+    sbatch_lines.append(
+        "python vocab.py \\",
+    )
+    sbatch_lines.append(
+        "    " \
+        "--data {data:s}" \
+        "--file {file:s} --thresh {thresh:d}\\".format(
+            data=args.data, file=args.file, thresh=args.thresh
+        ),
+    )
+    # Save to file.
+    path = os.path.join(args.data, "vocab_submit.sb")
+    with open(path, "w") as file:
+        file.write("\n".join(sbatch_lines) + "\n")
+
+    # Run the command.
+    print("[\033[31msbatch\033[0m] {:s}".format(path))
+    os.system("sbatch {:s}".format(path))
+
 
 class Vocabulary(object):
     def __init__(self):
@@ -112,11 +173,18 @@ if __name__ == "__main__":
                       help="Frequency threshold to discard word.",
                       default=2
                       )
-    args = parser.parse_args()
-    print(args.data, args.file, args.thresh)
-    vocab = build_vocab(args.data, args.file, args.thresh)
-    print(len(vocab), vocab.length)
-    vocab_file = os.path.join(args.data, 'vocab.pkl')
-    pickle.dump(vocab, vocab_file)
+    parser.add_argument('--sbatch', action='store_true',
+                        help='submit to sbatch')
 
-    vocab.save_vocab(file_name='vocab.pkl', data_dir=args.data)
+    args = parser.parse_args()
+    if args.sbatch:
+        sbatch_submit()
+        exit()
+    else:
+        print(args.data, args.file, args.thresh)
+        vocab = build_vocab(args.data, args.file, args.thresh)
+        print(len(vocab), vocab.length)
+        vocab_file = os.path.join(args.data, 'vocab.pkl')
+        pickle.dump(vocab, vocab_file)
+
+        vocab.save_vocab(file_name='vocab.pkl', data_dir=args.data)
