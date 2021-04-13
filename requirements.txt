@@ -1,3 +1,6 @@
 nltk
 # pycontractions
 gensim
+gitpython
+language_tool_python
+pyemd

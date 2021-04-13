@@ -1,5 +1,6 @@
 import unittest
-from vocab import Vocabulary, build_vocab
+from build_vocab import build_vocab
+from meme_cap_generator.vocabulary import Vocabulary
 
 
 class TestVocab(unittest.TestCase):
