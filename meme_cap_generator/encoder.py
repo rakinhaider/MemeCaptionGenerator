@@ -2,6 +2,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torch
 
+
 class Encoder(nn.Module):
     def __init__(self, embed_size):
         super(Encoder, self).__init__()
@@ -15,6 +16,7 @@ class Encoder(nn.Module):
 
     def forward(self, image):
         with torch.no_grad():
+            self.conv_net.eval()
             features = self.conv_net(image)
         return self.linear(features)
 

@@ -1,4 +1,6 @@
 import os
+import logging
+logger = logging.getLogger(__name__)
 import nltk
 from PIL import Image
 from torch.utils import data as data
@@ -14,10 +16,10 @@ class MemeDataset(data.Dataset):
         self.img_captions = []
         self.ids = []
         self.captions = []
-        self.load_dataset()
         self.transform = transform
+        self.max_len = -1
 
-    def load_dataset(self):
+    def load_dataset(self, num_samples):
         with open(self.caption_file) as f:
             for line in f:
                 splits = line.split(' - ')
@@ -33,6 +35,13 @@ class MemeDataset(data.Dataset):
                 caption = torch.tensor(caption)
 
                 self.captions.append(caption)
+                if len(self.ids) == num_samples:
+                    break
+
+        self.max_len = max([len(c) for c in self.captions])
+
+    def __len__(self):
+        return len(self.ids)
 
     def __getitem__(self, index):
         id = self.ids[index]
@@ -47,3 +56,24 @@ class MemeDataset(data.Dataset):
         else:
             image = transforms.ToTensor()(image)
         return image, caption
+
+
+def collate_memes(data):
+    # print(data)
+    images = torch.stack([t[0] for t in data], dim=0)
+
+    captions = [t[1] for t in data]
+    lengths = torch.tensor([len(c) for c in captions])
+    max_len = torch.max(lengths)
+
+    cap_tensor = torch.zeros((len(data), max_len), dtype=torch.long)
+
+    for i, c in enumerate(captions):
+        cap_tensor[i][:len(c)] = c
+
+    # logger.debug(images.shape)
+    # logger.debug(cap_tensor)
+    # logger.debug(captions)
+    # logger.debug(lengths)
+
+    return images, cap_tensor, lengths

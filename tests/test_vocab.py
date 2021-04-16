@@ -4,22 +4,27 @@ from meme_cap_generator.vocabulary import Vocabulary
 
 
 class TestVocab(unittest.TestCase):
+    w2i = {'<pad>': 0, '<start>': 1, '<end>': 2, '<unk>': 3,
+           'meme': 4, 'y': 5, 'u': 6, 'no': 7, 'give': 8,
+           'more': 9, '?': 10, 'i': 11, 'do': 12}
+    i2w = {0: '<pad>', 1: '<start>', 2: '<end>', 3: '<unk>',
+           4: 'meme', 5: 'y', 6: 'u', 7: 'no', 8: 'give',
+           9: 'more', 10: '?', 11: 'i', 12: 'do'}
+    length = 13
+
     def test_build_vocab(self):
         data_dir = '../data/'
         caption_file = 'test_captions.txt'
         threshold = 2
         vocab = build_vocab(data_dir, caption_file, threshold)
-        print(vocab.word2idx)
-        print(vocab.idx2word)
-        print(len(vocab))
-        vocab.save_vocab(file_name='test_vocab.pkl',
-                         data_dir='../data/')
+        assert vocab.word2idx == self.w2i
+        assert vocab.idx2word == self.i2w
+        assert vocab.length == self.length
 
-        vocab_load = Vocabulary().load_vocab(file_name='test_vocab.pkl',
-                                             data_dir='../data/')
-        print(vocab.word2idx)
-        print(vocab.idx2word)
-        print(vocab.length)
-        assert vocab_load.length == vocab.length
-        assert vocab_load.word2idx == vocab.word2idx
-        assert vocab_load.idx2word == vocab.idx2word
+    def test_save_vocab(self):
+        vocab_load = Vocabulary()
+        vocab_load.load_vocab(file_name='test_vocab.pkl',
+                              data_dir='../data')
+        assert vocab_load.length == self.length
+        assert vocab_load.word2idx == self.w2i
+        assert vocab_load.idx2word == self.i2w
