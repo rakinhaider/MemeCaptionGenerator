@@ -53,6 +53,12 @@ class Main(object):
         self.rng_cpu.manual_seed(self.random_seed)
         self.rng_gpu.manual_seed(self.random_seed)
 
+        self.title = self.generate_title()
+        os.makedirs(
+            os.path.join("logs", self.title),
+            exist_ok=True,
+        )
+
         if self.sbatch:
             self.sbatch_submit()
             exit()
@@ -61,12 +67,6 @@ class Main(object):
         if self.gen:
             self.generate_image_embeddings()
             return
-
-        self.title = self.generate_title()
-        os.makedirs(
-            os.path.join("logs", self.title),
-            exist_ok=True,
-        )
 
         self.vocab = self.get_vocabulary()
         self.prepare_models()
@@ -193,6 +193,10 @@ class Main(object):
             sbatch_lines.append(
                 "   -s\\",
             )
+        elif self.gen:
+            sbatch_lines.append(
+                "   -g --encoder-type {:s}\\".format(self.encoder_type),
+            )
         sbatch_lines.append(
             "   --num-workers {:d}\\".format(self.num_workers)
         )
@@ -202,32 +206,37 @@ class Main(object):
             )
         )
         sbatch_lines.append(
-            "   --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \\"
-        )
-        sbatch_lines.append(
-            "   -e {:d} --device {:s} --random-seed {:d}\\".format(
-                self.num_epochs, self.device, self.random_seed
-            )
-        )
-        sbatch_lines.append(
-            "   "\
-            "--embed-size {:d} --batch-size {:d} --lstm-layers 3 \\".format(
-                self.embed_size, self.batch_size, self.lstm_layers
-            )
-        )
-        sbatch_lines.append(
-            "   "\
-            "--num-samples {:d} {:s} --hidden-size {:d}\\".format(
-                self.num_samples,
-                '--debug' if self.debug else '',
-                self.hidden_size
+            "   --device {:s} --random-seed {:d}\\".format(
+                self.device, self.random_seed
             )
         )
 
-        sbatch_lines.append(
-            "   --learning-rate {:f}\\".format(self.learning_rate)
-        )
+        if not self.gen:
 
+            sbatch_lines.append(
+                "   --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \\"
+            )
+            sbatch_lines.append(
+                "   -e {:d}\\".format(self.num_epochs)
+            )
+            sbatch_lines.append(
+                "   "\
+                "--embed-size {:d} --batch-size {:d} --lstm-layers 3 \\".format(
+                    self.embed_size, self.batch_size, self.lstm_layers
+                )
+            )
+            sbatch_lines.append(
+                "   "\
+                "--num-samples {:d} {:s} --hidden-size {:d}\\".format(
+                    self.num_samples,
+                    '--debug' if self.debug else '',
+                    self.hidden_size
+                )
+            )
+
+            sbatch_lines.append(
+                "   --learning-rate {:f}\\".format(self.learning_rate)
+            )
 
         # Save to file.
         path = os.path.join("logs", self.title, "submit.sb")
@@ -281,14 +290,17 @@ class Main(object):
                                )
 
     def generate_title(self):
+        if self.gen:
+            title = self.encoder_type
         # TODO: add v_thresh as commandline argument.
-        self.v_thresh = 2
-        title = 'MCG_{:s}_{:d}_{:d}_{:d}_{:d}_{:s}'.format(
-            self.encoder_type, self.embed_size,
-            self.hidden_size, self.lstm_layers,
-            self.v_thresh,
-            self.pretrain_embed if self.pretrain_embed else '0')
-        print(title)
+        else:
+            self.v_thresh = 2
+            title = 'MCG_{:s}_{:d}_{:d}_{:d}_{:d}_{:s}'.format(
+                self.encoder_type, self.embed_size,
+                self.hidden_size, self.lstm_layers,
+                self.v_thresh,
+                self.pretrain_embed if self.pretrain_embed else '0')
+            print(title)
         return title
 
     def generate_image_embeddings(self):
@@ -300,12 +312,13 @@ class Main(object):
         image_list = os.listdir(image_dir)
         img_embeddings = torch.empty(len(image_list), 2048)
 
+        model.eval()
+
         for i, img in enumerate(image_list):
             print(i, img)
             img = Image.open(os.path.join(image_dir, img)).convert('RGB')
             img = self.transforms['train'](img)
             img = img.unsqueeze(0)
-            model.eval()
             embed = model(img)
             print(embed)
             print(embed.shape, flush=True)
