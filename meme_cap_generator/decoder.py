@@ -1,6 +1,7 @@
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 import torch
+import logging
 
 
 class Decoder(nn.Module):
@@ -34,14 +35,15 @@ class Decoder(nn.Module):
 
     def sample(self, feature, max_len):
         caption = []
+        state = None
+        logging.debug(feature.shape)
         for i in range(max_len):
             hidden, state = self.lstm(feature, state)
             output = self.linear(feature)
-            output = torch.softmax(output)
-            prediction = torch.argmax(output)
-            print(self.vocab[prediction.item()])
-            caption.append(self.vocab[prediction.item()])
+            output = torch.softmax(output, dim=2)
+            prediction = output.argmax()
+            caption.append(self.vocab(prediction.item()))
             if caption[-1] == '<end>':
                 break
-            feature = self.embedding(prediction)
+            feature = self.embedding(prediction).unsqueeze(0).unsqueeze(0)
         return caption

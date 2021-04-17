@@ -21,11 +21,13 @@ class Main(object):
         self.args = self.console.parse_args()
         self.train = self.args.train
         self.sample = self.args.sample
+        self.num_workers = self.args.num_workers
         self.data_dir = self.args.data_dir
         self.cap_file = self.args.cap_file
         self.vocab_file = self.args.vocab_file
         self.embed_file = self.args.embed_file
 
+        self.sbatch = self.args.sbatch
         self.num_epochs = self.args.num_epochs
         self.random_seed = self.args.random_seed
         self.num_samples = self.args.num_samples
@@ -50,12 +52,22 @@ class Main(object):
 
         self.add_logging()
 
+        self.title = self.generate_title()
+        os.makedirs(
+            os.path.join("logs", self.title),
+            exist_ok=True,
+        )
+
+        if self.sbatch:
+            self.sbatch_submit()
+            exit()
+
         self.vocab = self.get_vocabulary()
         self.transforms = self.get_transfroms()
+        self.prepare_models()
         if self.train:
             self.dataset = self.get_dataset()
             self.loader = self.get_loader()
-            self.prepare_models()
 
             self.fit()
         elif self.sample:
@@ -75,6 +87,8 @@ class Main(object):
         group.add_argument('-s', '--sample', action='store_true',
                            help='Sample captions the model')
 
+        parser.add_argument('--num-workers', type=int,
+                            help='Number of workers in GPU')
         parser.add_argument('-d', '--debug', action='store_true',
                             help='Debug level')
         # Dataset Arguments
@@ -86,6 +100,8 @@ class Main(object):
         parser.add_argument('--embed-file', help='Use pretrained embedding')
 
         # Train Paramters
+        parser.add_argument('--sbatch', help='Run using sbatch',
+                            action='store_true')
         parser.add_argument('-e', '--num-epochs', help='Number of epochs',
                             type=int)
         parser.add_argument('--device', help='Device for training',
@@ -108,9 +124,117 @@ class Main(object):
         parser.add_argument('--hidden-size', help='Hidden layer size', type=int)
         parser.add_argument('--lstm-layers', help='LSTM layers', type=int)
 
-        parser.add_argument('--pretrained-embed', action='store_true',
-                            default=False,
+        parser.add_argument('--pretrained-embed', choices=['g', 't'],
+                            default=None,
                             help='Use pretrained embedding')
+
+    def sbatch_submit(self) -> None:
+        r"""
+        Submit by `sbatch`.
+
+        Args
+        ----
+
+        Returns
+        -------
+        """
+        # /
+        # ANNOTATE
+        # /
+        # Initialize sbatch submission file.
+        sbatch_lines = ["#!/bin/bash"]
+
+        # Hardware resources.
+        if (self.device == "cuda"):
+            sbatch_lines.append("#SBATCH -A gpu")
+            sbatch_lines.append("#SBATCH --gres=gpu:1")
+        elif (self.device == "cpu"):
+            sbatch_lines.append("#SBATCH -A scholar")
+        else:
+            print(
+                "[\033[91mError\033[0m]: Unknown device \"{:s}\".".format(
+                    self.device
+                ),
+            )
+            raise RuntimeError
+        sbatch_lines.append(
+            "#SBATCH --cpus-per-task={:d}".format(self.num_workers + 1),
+        )
+        sbatch_lines.append("#SBATCH --nodes=1")
+
+        # Time limit.
+        sbatch_lines.append("#SBATCH --job-name {:s}".format(self.title))
+        sbatch_lines.append("#SBATCH --time=60:00")
+
+        # IO redirection.
+        sbatch_lines.append(
+            "#SBATCH --output {:s}".format(
+                os.path.join("logs", self.title, "output"),
+            ),
+        )
+        sbatch_lines.append(
+            "#SBATCH --error {:s}".format(
+                os.path.join("logs", self.title, "error"),
+            ),
+        )
+
+        # Python script.
+        sbatch_lines.append(
+            "python main.py \\",
+        )
+        if self.train:
+            sbatch_lines.append(
+                "   -t\\"
+            )
+        elif self.sample:
+            sbatch_lines.append(
+                "   -s\\",
+            )
+        sbatch_lines.append(
+            "   --num-workers {:d}\\".format(self.num_workers)
+        )
+        sbatch_lines.append(
+            "   --data-dir {:s} -cf {:s} \\".format(
+                self.data_dir, self.cap_file
+            )
+        )
+        sbatch_lines.append(
+            "   --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \\"
+        )
+        sbatch_lines.append(
+            "   -e {:d} --device {:s} --random-seed {:d}\\".format(
+                self.num_epochs, self.device, self.random_seed
+            )
+        )
+        sbatch_lines.append(
+            "   "\
+            "--embed-size {:d} --batch-size {:d} --lstm-layers 3 \\".format(
+                self.embed_size, self.batch_size, self.lstm_layers
+            )
+        )
+        sbatch_lines.append(
+            "   "\
+            "--num-samples {:d} {:s} --hidden-size {:d}\\".format(
+                self.num_samples,
+                '--debug' if self.debug else '',
+                self.hidden_size
+            )
+        )
+
+        sbatch_lines.append(
+            "   --learning-rate {:f}\\".format(self.learning_rate)
+        )
+
+
+        # Save to file.
+        path = os.path.join("logs", self.title, "submit.sb")
+        with open(path, "w") as file:
+            file.write("\n".join(sbatch_lines) + "\n")
+
+        # Run the command.
+        print("[\033[31msbatch\033[0m] {:s}".format(path))
+        os.system("sbatch {:s}".format(path))
+
 
     def get_transfroms(self):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -154,6 +278,18 @@ class Main(object):
                                pre_trained_embed_file=self.embed_file
                                )
 
+    def generate_title(self):
+        # TODO: add v_thresh as commandline argument.
+        self.v_thresh = 2
+        self.encoder_type = 'inc'
+        title = 'MCG_{:s}_{:d}_{:d}_{:d}_{:d}_{:s}'.format(
+            self.encoder_type, self.embed_size,
+            self.hidden_size, self.lstm_layers,
+            self.v_thresh,
+            self.pretrain_embed if self.pretrain_embed else '0')
+        self.logger.debug(title)
+        return title
+
     def train_minibatch(self):
         batch_loss = 0
         for i, (images, captions, lengths) in enumerate(self.loader):
@@ -184,9 +320,8 @@ class Main(object):
 
         loss = self.train_minibatch()
         best_loss = loss
-        best_model_dict = {'encoder': self.encoder.state_dict(),
-                           'decoder': self.decoder.state_dict()
-        }
+        best_model_dict = {'encoder': deepcopy(self.encoder.state_dict()),
+                           'decoder': deepcopy(self.decoder.state_dict())}
 
         for epoch in range(self.num_epochs):
             loss = self.train_minibatch()
@@ -201,16 +336,17 @@ class Main(object):
                 }
             # break
 
-        torch.save(
-            self.encoder, 'encoder' + '_best.pt'
-        )
-        torch.save(
-            self.decoder, 'decoder' + '_best.pt'
-        )
+        for model in ['encoder', 'decoder']:
+            torch.save(
+                {key: val.cpu() for key, val in best_model_dict[model].items()},
+                os.path.join('logs', self.title, model + '_best.pt')
+            )
 
     def sample_caption(self):
-        self.encoder = torch.load('encoder_best.pt')
-        self.decoder = torch.load('decoder_best.pt')
+        path = os.path.join('logs', self.title, 'encoder_best.pt')
+        self.encoder.load_state_dict(torch.load(path))
+        path = os.path.join('logs', self.title, 'decoder_best.pt')
+        self.decoder.load_state_dict(torch.load(path))
 
         for img_file in self.sample_images:
             self.logger.info(img_file)
@@ -220,8 +356,10 @@ class Main(object):
             img = self.transforms['test'](img)
             img = img.unsqueeze(0)
             feature = self.encoder(img)
+            feature = feature.unsqueeze(1)
             caption = self.decoder.sample(feature, self.max_len)
-            print(caption)
+            caption = [self.vocab.idx2word[i] for i in caption]
+            logging.info(caption)
 
 
 if __name__ == "__main__":
