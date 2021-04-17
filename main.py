@@ -258,7 +258,7 @@ class Main(object):
             self.dataset,
             replacement=False, generator=self.rng_cpu,
         )
-        loader = DataLoader(self.dataset, batch_size=5, sampler=sampler,
+        loader = DataLoader(self.dataset, batch_size=self.batch_size, sampler=sampler,
                             num_workers=1, drop_last=True,
                             collate_fn=collate_memes)
 
