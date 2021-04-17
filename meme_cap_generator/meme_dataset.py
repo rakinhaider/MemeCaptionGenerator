@@ -35,7 +35,8 @@ class MemeDataset(data.Dataset):
 
                 img_path = os.path.join(self.image_dir, 'memes',
                                         img_name + '.jpg')
-                if os.path.exists(img_path):
+                if not os.path.exists(img_path):
+                    print(img_path)
                     continue
 
                 caption = splits[1]

@@ -4,6 +4,7 @@ from torchvision import transforms
 from PIL import Image
 import numpy as np
 
+
 class TestMemeDataset(unittest.TestCase):
     def test_get_item(self):
         vocab = Vocabulary()
@@ -28,3 +29,11 @@ class TestMemeDataset(unittest.TestCase):
         """
         for idx in caption.data:
             print(vocab.idx2word[idx.item()], end=' ')
+
+    def test_load_dataset(self):
+        vocab = Vocabulary()
+        vocab.load_vocab('vocab_2_CaptionsClean_nopunc_t.pkl', '../data/')
+        md = MemeDataset('../data/', 'CaptionsClean_nopunc_-1_t.txt', vocab)
+        md.load_dataset(-1)
+
+        print(len(md))
