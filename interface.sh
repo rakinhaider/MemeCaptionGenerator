@@ -8,15 +8,15 @@
 # It will automatically generate `sbatch` submission file and submit, so you
 # do not need to write submission commands by yourself.
 # To run on GPU, replace device variable from "cpu" to "cuda".
-sbatch="--sbatch"
+sbatch=""
 data_dir="data/"
 seed="0"
 workers="2"
 device="cpu"
-num_samples=-1
+num_samples=1000
 
 # Task specified configurations.
-epochs="100"
+epochs="3"
 
 # Meme Caption Generator Train
 if [ "$1" = "gen_embed" ]; then
@@ -34,9 +34,9 @@ if [ "$1" = "embed_size" ]; then
             -cf 'CaptionsClean_nopunc_-1_t.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
-            --embed-size ${embed_size} --batch-size 32 --lstm-layers 3\
+            --embed-size ${embed_size} --batch-size 5 --lstm-layers 3\
             --num-samples ${num_samples} --debug --hidden-size 50
-    break;
+        break;
     done
 fi;
 

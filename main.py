@@ -121,7 +121,7 @@ class Main(object):
                             help='Maximum length of generated caption')
         # Model Parameters
         parser.add_argument('--encoder-type', help='Encoder Type',
-                            choices=['inc', 'res'])
+                            default='inc', choices=['inc', 'res'])
         parser.add_argument('--embed-size', help='Embedding Size', type=int)
         parser.add_argument('--batch-size', help='Batch size', type=int)
         parser.add_argument('--hidden-size', help='Hidden layer size', type=int)
@@ -282,7 +282,8 @@ class Main(object):
         return vocab
 
     def prepare_models(self):
-        self.encoder = Encoder(self.embed_size, self.encoder_type)
+        self.encoder = Encoder(self.embed_size, self.encoder_type,
+                               self.data_dir)
         self.decoder = Decoder(self.embed_size, self.hidden_size,
                                self.vocab, self.lstm_layers,
                                pre_trained_embed=self.pretrain_embed,
@@ -314,15 +315,18 @@ class Main(object):
 
         model.eval()
 
-        for i, img in enumerate(image_list):
-            print(i, img)
-            img = Image.open(os.path.join(image_dir, img)).convert('RGB')
-            img = self.transforms['train'](img)
-            img = img.unsqueeze(0)
-            embed = model(img)
-            print(embed)
-            print(embed.shape, flush=True)
-            img_embeddings[i][:] = embed[0][:]
+        with torch.no_grad():
+            for i, img in enumerate(image_list):
+                print(i, img, flush=True)
+                img = Image.open(os.path.join(image_dir, img)).convert('RGB')
+                img = self.transforms['train'](img)
+                img = img.unsqueeze(0)
+                embed = model(img)
+                del img
+                # print(embed)
+                # print(embed.shape, flush=True)
+                img_embeddings[i][:] = embed[0][:]
+                del embed
 
         torch.save(img_embeddings,
             os.path.join(self.data_dir, self.encoder_type + '.pkl')
@@ -331,7 +335,7 @@ class Main(object):
     def train_minibatch(self):
         batch_loss = 0
         for i, (images, captions, lengths) in enumerate(self.loader):
-            print('Step {}/{} of mini-batch'.format(i, len(self.loader)))
+            # print('Step {}/{} of mini-batch'.format(i, len(self.loader)))
             images.to(self.device)
             captions.to(self.device)
             lengths.to(self.device)
@@ -388,7 +392,7 @@ class Main(object):
         self.decoder.load_state_dict(torch.load(path))
 
         for img_file in self.sample_images:
-            self.logger.info(img_file)
+            print(img_file)
             img_file = os.path.join(self.data_dir, 'memes/', img_file)
             img = Image.open(img_file).convert('RGB')
             img.show()

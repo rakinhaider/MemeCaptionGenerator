@@ -78,7 +78,6 @@ class MemeDataset(data.Dataset):
 
 
 def collate_memes(data):
-    # print(data)
     images = torch.stack([t[0] for t in data], dim=0)
 
     captions = [t[1] for t in data]
@@ -89,10 +88,5 @@ def collate_memes(data):
 
     for i, c in enumerate(captions):
         cap_tensor[i][:len(c)] = c
-
-    logger.debug(images.shape)
-    # logger.debug(cap_tensor)
-    # logger.debug(captions)
-    # logger.debug(lengths)
 
     return images, cap_tensor, lengths

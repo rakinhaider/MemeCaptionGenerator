@@ -1,27 +1,29 @@
+import os
 import torch.nn as nn
 import torchvision.models as models
 import torch
 
 
 class Encoder(nn.Module):
-    def __init__(self, embed_size, encoder_type):
+    def __init__(self, embed_size, encoder_type, data_dir):
         super(Encoder, self).__init__()
         self.embed_size = embed_size
-        if encoder_type == 'inc':
-            self.conv_net = models.inception_v3(pretrained=True)
-            in_size = self.conv_net.fc.in_features
-            self.conv_net.fc = nn.Identity(in_size, in_size)
-        elif encoder_type == 'res':
-            self.conv_net = models.resnet34(pretrained=True)
-            # TODO: fix the last layer.
-        for param in self.conv_net.parameters():
+
+        embedding_file = os.path.join(data_dir, encoder_type + '.pkl')
+        embedding = torch.load(embedding_file)
+        self.embedding = nn.Embedding(embedding.shape[0],
+                                      embedding.shape[1])
+        self.embedding.load_state_dict({'weight': embedding})
+        self.embedding.eval()
+
+        in_size = embedding.shape[1]
+        for param in self.embedding.parameters():
             param.requires_grad = False
         self.linear = nn.Linear(in_size, embed_size)
 
     def forward(self, image):
         with torch.no_grad():
-            self.conv_net.eval()
-            features = self.conv_net(image)
+            features = self.embedding(image)
         return self.linear(features)
 
 
