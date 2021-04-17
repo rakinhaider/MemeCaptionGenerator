@@ -29,6 +29,7 @@ class MemeDataset(data.Dataset):
             self.id2index[name] = i
 
         with open(self.caption_file) as f:
+            i = 0
             for line in f:
                 splits = line.split(' - ')
                 # TODO: Should have modified it when vocabulary was updated.
@@ -51,12 +52,25 @@ class MemeDataset(data.Dataset):
                 caption = [self.vocab('<start>')] + caption
                 caption += [self.vocab('<end>')]
                 caption = torch.tensor(caption)
-
+                valid = False
+                unknown_word = self.vocab('<unk>')
+                for word in caption[1:-1]:
+                    if word != unknown_word:
+                        valid = True
+                if not valid:
+                    # print()
+                    # print(caption)
+                    # print(img_name)
+                    continue
                 self.ids.append(img_name)
                 self.captions.append(caption)
                 if len(self.ids) == num_samples:
                     break
+                elif i % 1000 == 0:
+                    print('\rData read {:d}'.format(i), end='')
+                i += 1
 
+        print()
         self.max_len = max([len(c) for c in self.captions])
 
     def __len__(self):
@@ -66,27 +80,26 @@ class MemeDataset(data.Dataset):
         id = self.ids[index]
         caption = self.captions[index]
 
-        image = Image.open(os.path.join(self.data_dir,
-                                        'memes',
-                                        id + '.jpg'))
-        image = image.convert('RGB')
-        if self.transform is not None:
-            image = self.transform(image)
-        else:
-            image = transforms.ToTensor()(image)
-        return torch.tensor(self.id2index[id]), caption
+        return torch.tensor([[self.id2index[id]]]), caption
 
 
 def collate_memes(data):
+    # print('collating started')
     images = torch.stack([t[0] for t in data], dim=0)
 
     captions = [t[1] for t in data]
     lengths = torch.tensor([len(c) for c in captions])
     max_len = torch.max(lengths)
-
+    # print('image, caption, length generated')
     cap_tensor = torch.zeros((len(data), max_len), dtype=torch.long)
 
     for i, c in enumerate(captions):
         cap_tensor[i][:len(c)] = c
+
+    images = images.squeeze()
+
+    # print(images.shape)
+    # print(cap_tensor.shape)
+    # print(lengths.shape)
 
     return images, cap_tensor, lengths

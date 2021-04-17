@@ -16,7 +16,7 @@ device="cuda"
 num_samples=-1
 
 # Task specified configurations.
-epochs="3"
+epochs="100"
 
 # Meme Caption Generator Train
 if [ "$1" = "gen_embed" ]; then
@@ -29,14 +29,15 @@ fi;
 # Meme Caption Generator Train
 if [ "$1" = "embed_size" ]; then
     for embed_size in 50 300 500; do
+        echo 'working'
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
-            --embed-size ${embed_size} --batch-size 5 --lstm-layers 3\
+            --embed-size ${embed_size} --batch-size 512 --lstm-layers 3\
             --num-samples ${num_samples} --debug --hidden-size 50
-        break;
+        break
     done
 fi;
 

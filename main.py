@@ -16,6 +16,7 @@ from PIL import Image
 
 class Main(object):
     def __init__(self):
+        print('1')
         self.console = argparse.ArgumentParser()
         self.add_arguments()
         self.args = self.console.parse_args()
@@ -53,6 +54,7 @@ class Main(object):
         self.rng_cpu.manual_seed(self.random_seed)
         self.rng_gpu.manual_seed(self.random_seed)
 
+        print(2)
         self.title = self.generate_title()
         os.makedirs(
             os.path.join("logs", self.title),
@@ -63,15 +65,20 @@ class Main(object):
             self.sbatch_submit()
             exit()
 
+        print('3')
         self.transforms = self.get_transfroms()
         if self.gen:
             self.generate_image_embeddings()
             return
 
+        print('4')
         self.vocab = self.get_vocabulary()
+        print('5')
         self.prepare_models()
         if self.train:
+            print('6')
             self.dataset = self.get_dataset()
+            print('7')
             self.loader = self.get_loader()
 
             self.fit()
@@ -265,13 +272,10 @@ class Main(object):
         return dataset
 
     def get_loader(self):
-        sampler = torch.utils.data.RandomSampler(
-            self.dataset,
-            replacement=False, generator=self.rng_cpu,
-        )
-        loader = DataLoader(self.dataset, batch_size=self.batch_size, sampler=sampler,
-                            num_workers=1, drop_last=True,
-                            collate_fn=collate_memes)
+        loader = DataLoader(self.dataset, batch_size=self.batch_size,
+                            shuffle=True, num_workers=0,
+                            drop_last=True, collate_fn=collate_memes,
+                            pin_memory=False)
 
         return loader
 
@@ -333,9 +337,11 @@ class Main(object):
         )
 
     def train_minibatch(self):
+        print('minibatch start')
         batch_loss = 0
-        for i, (images, captions, lengths) in enumerate(self.loader):
-            # print('Step {}/{} of mini-batch'.format(i, len(self.loader)))
+        i = 0
+        for images, captions, lengths in self.loader:
+            print('Step {}/{} of mini-batch'.format(i, len(self.loader)))
             images.to(self.device)
             captions.to(self.device)
             lengths.to(self.device)
@@ -351,16 +357,18 @@ class Main(object):
             self.decoder.zero_grad()
             loss.backward()
             self.optimizer.step()
+            i += 1
 
         return batch_loss/len(self.loader)
 
     def fit(self):
-
+        print('Training started.')
         self.criterion = torch.nn.CrossEntropyLoss()
         params = list(self.decoder.parameters())
         params += list(self.encoder.linear.parameters())
         self.optimizer = torch.optim.Adam(params, lr=self.learning_rate)
 
+        print('0 minibatch')
         loss = self.train_minibatch()
         best_loss = loss
         best_model_dict = {'encoder': deepcopy(self.encoder.state_dict()),
