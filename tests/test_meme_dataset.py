@@ -7,9 +7,12 @@ import numpy as np
 class TestMemeDataset(unittest.TestCase):
     def test_get_item(self):
         vocab = Vocabulary()
-        vocab.load_vocab('vocab_2_-1_g.pkl', '../data/')
-        md = MemeDataset('../data/', 'CaptionsClean_nopunc_-1.txt', vocab)
-        image, caption = md.__getitem__(2)
+        vocab.load_vocab('test_vocab.pkl', '../data/')
+        md = MemeDataset('../data/', 'test_captions.txt', vocab)
+        md.load_dataset(-1)
+        image, caption = md.__getitem__(3)
+        print(caption)
+        transforms.ToPILImage()(image).show()
         """
         # print(transformed)
         img = transforms.ToPILImage()(transformed)

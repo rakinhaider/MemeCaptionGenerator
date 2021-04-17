@@ -247,7 +247,7 @@ class Main(object):
         return {'train': transform, 'test': transform}
 
     def get_dataset(self):
-        self.logger.debug('Get Dataset')
+        self.logger.info('Dataset Read')
         dataset = MemeDataset(self.data_dir, self.cap_file,
                               self.vocab, self.transforms['train'])
         dataset.load_dataset(self.num_samples)
@@ -267,7 +267,7 @@ class Main(object):
     def get_vocabulary(self):
         vocab = Vocabulary()
         vocab.load_vocab(self.vocab_file, self.data_dir)
-        self.logger.debug('Vocabulary contains {} words'.format(vocab.length))
+        self.logger.info('Vocabulary contains {} words'.format(vocab.length))
         return vocab
 
     def prepare_models(self):
@@ -287,7 +287,7 @@ class Main(object):
             self.hidden_size, self.lstm_layers,
             self.v_thresh,
             self.pretrain_embed if self.pretrain_embed else '0')
-        self.logger.debug(title)
+        self.logger.info(title)
         return title
 
     def train_minibatch(self):

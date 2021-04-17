@@ -6,6 +6,7 @@ from PIL import Image
 from torch.utils import data as data
 import torch
 from torchvision import transforms
+import string
 
 
 class MemeDataset(data.Dataset):
@@ -23,7 +24,15 @@ class MemeDataset(data.Dataset):
         with open(self.caption_file) as f:
             for line in f:
                 splits = line.split(' - ')
-                img_name = splits[0].replace(' ', '-')
+
+                # TODO: Should have modified it when vocabulary was updated.
+                #  Doing here anyway. Should be removed.
+                punc_table = dict(
+                    (ord(char), None) for char in string.punctuation)
+                img_name = splits[0]
+                img_name = img_name.translate(punc_table)
+                img_name = img_name.replace(' ', '-')
+
                 caption = splits[1]
                 self.ids.append(img_name)
 

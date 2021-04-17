@@ -4,3 +4,4 @@ data/test_*
 data/GoogleNews-vectors-negative300*
 
 **/*pycache*/*
+**/logs/**
