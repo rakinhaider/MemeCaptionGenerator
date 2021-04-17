@@ -24,7 +24,6 @@ class MemeDataset(data.Dataset):
         with open(self.caption_file) as f:
             for line in f:
                 splits = line.split(' - ')
-
                 # TODO: Should have modified it when vocabulary was updated.
                 #  Doing here anyway. Should be removed.
                 punc_table = dict(
@@ -34,8 +33,12 @@ class MemeDataset(data.Dataset):
                 img_name = img_name.replace(' ', '-')
                 img_name = img_name.replace('--', '-')
 
+                img_path = os.path.join(self.image_dir, 'memes',
+                                        img_name + '.jpg')
+                if os.path.exists(img_path):
+                    continue
+
                 caption = splits[1]
-                self.ids.append(img_name)
 
                 caption = nltk.word_tokenize(caption)
 
@@ -44,6 +47,7 @@ class MemeDataset(data.Dataset):
                 caption += [self.vocab('<end>')]
                 caption = torch.tensor(caption)
 
+                self.ids.append(img_name)
                 self.captions.append(caption)
                 if len(self.ids) == num_samples:
                     break
