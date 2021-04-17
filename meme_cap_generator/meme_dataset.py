@@ -1,5 +1,6 @@
 import os
 import logging
+
 logger = logging.getLogger(__name__)
 import nltk
 from PIL import Image
@@ -24,7 +25,8 @@ class MemeDataset(data.Dataset):
     def load_dataset(self, num_samples):
         image_list = os.listdir(os.path.join(self.data_dir, 'memes'))
         for i, img in enumerate(image_list):
-            self.id2index[img] = i
+            name, ext = os.path.splitext(img)
+            self.id2index[name] = i
 
         with open(self.caption_file) as f:
             for line in f:
@@ -38,7 +40,7 @@ class MemeDataset(data.Dataset):
                 img_name = img_name.replace(' ', '-')
                 img_name = img_name.replace('--', '-')
 
-                if self.id2index.get(img_name, None):
+                if self.id2index.get(img_name, None) is None:
                     continue
 
                 caption = splits[1]
@@ -88,7 +90,7 @@ def collate_memes(data):
     for i, c in enumerate(captions):
         cap_tensor[i][:len(c)] = c
 
-    # logger.debug(images.shape)
+    logger.debug(images.shape)
     # logger.debug(cap_tensor)
     # logger.debug(captions)
     # logger.debug(lengths)
