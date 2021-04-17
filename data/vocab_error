@@ -1,0 +1,2 @@
+/var/spool/slurm/job71511/slurm_script: line 13: 120183 Killed                  python vocab.py --data data/ --file CaptionsClean.txt --thresh 2
+slurmstepd: error: Detected 2 oom-kill event(s) in step 71511.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.

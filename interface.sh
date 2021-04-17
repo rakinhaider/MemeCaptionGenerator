@@ -13,7 +13,7 @@ data_dir="data/"
 seed="0"
 workers="2"
 device="cuda"
-num_sample=-1
+num_samples=-1
 
 # Task specified configurations.
 epochs="100"
@@ -29,7 +29,7 @@ if [ "$1" = "embed_size" ]; then
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size ${embed_size} --batch-size 32 --lstm-layers 3\
             --num-samples ${num_samples} --debug --hidden-size 50
-        break
+    break;
     done
 fi;
 

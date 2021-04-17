@@ -29,9 +29,10 @@ class MemeDataset(data.Dataset):
                 #  Doing here anyway. Should be removed.
                 punc_table = dict(
                     (ord(char), None) for char in string.punctuation)
-                img_name = splits[0]
+                img_name = splits[0].replace('_', ' ')
                 img_name = img_name.translate(punc_table)
                 img_name = img_name.replace(' ', '-')
+                img_name = img_name.replace('--', '-')
 
                 caption = splits[1]
                 self.ids.append(img_name)
