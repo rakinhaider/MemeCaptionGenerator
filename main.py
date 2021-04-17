@@ -247,10 +247,10 @@ class Main(object):
         return {'train': transform, 'test': transform}
 
     def get_dataset(self):
-        self.logger.info('Dataset Read')
         dataset = MemeDataset(self.data_dir, self.cap_file,
                               self.vocab, self.transforms['train'])
         dataset.load_dataset(self.num_samples)
+        self.logger.info('Dataset contains {:d} items.'.format(len(dataset)))
         return dataset
 
     def get_loader(self):
