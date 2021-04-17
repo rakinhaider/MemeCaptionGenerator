@@ -1,6 +1,4 @@
 import os
-import logging
-logging.basicConfig(level=logging.DEBUG)
 from meme_cap_generator import MemeDataset, Vocabulary
 from meme_cap_generator.encoder import Encoder
 from meme_cap_generator.decoder import Decoder
@@ -10,9 +8,11 @@ import torch
 import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms
+from torchvision import models
 from torch.nn.utils.rnn import pack_padded_sequence
 from copy import deepcopy
 from PIL import Image
+
 
 class Main(object):
     def __init__(self):
@@ -21,6 +21,8 @@ class Main(object):
         self.args = self.console.parse_args()
         self.train = self.args.train
         self.sample = self.args.sample
+        self.gen = self.args.gen
+
         self.num_workers = self.args.num_workers
         self.data_dir = self.args.data_dir
         self.cap_file = self.args.cap_file
@@ -36,6 +38,7 @@ class Main(object):
         self.sample_images = self.args.sample_images
         self.max_len = self.args.max_len
 
+        self.encoder_type = self.args.encoder_type
         self.embed_size = self.args.embed_size
         self.batch_size = self.args.batch_size
         self.hidden_size = self.args.hidden_size
@@ -50,7 +53,14 @@ class Main(object):
         self.rng_cpu.manual_seed(self.random_seed)
         self.rng_gpu.manual_seed(self.random_seed)
 
-        self.add_logging()
+        if self.sbatch:
+            self.sbatch_submit()
+            exit()
+
+        self.transforms = self.get_transfroms()
+        if self.gen:
+            self.generate_image_embeddings()
+            return
 
         self.title = self.generate_title()
         os.makedirs(
@@ -58,12 +68,7 @@ class Main(object):
             exist_ok=True,
         )
 
-        if self.sbatch:
-            self.sbatch_submit()
-            exit()
-
         self.vocab = self.get_vocabulary()
-        self.transforms = self.get_transfroms()
         self.prepare_models()
         if self.train:
             self.dataset = self.get_dataset()
@@ -73,12 +78,6 @@ class Main(object):
         elif self.sample:
             self.sample_caption()
 
-    def add_logging(self):
-        # Wanted to do something else.
-        # But logger doesn't work in submodules when logger is configured
-        # before import other modules.
-        self.logger = logging
-
     def add_arguments(self):
         parser = self.console
         group = parser.add_mutually_exclusive_group()
@@ -86,6 +85,8 @@ class Main(object):
                            help='Train the model')
         group.add_argument('-s', '--sample', action='store_true',
                            help='Sample captions the model')
+        group.add_argument('-g', '--gen', action='store_true',
+                           help='Generate image embeddings')
 
         parser.add_argument('--num-workers', type=int,
                             help='Number of workers in GPU')
@@ -119,6 +120,8 @@ class Main(object):
         parser.add_argument('--max-len', type=int, default=20,
                             help='Maximum length of generated caption')
         # Model Parameters
+        parser.add_argument('--encoder-type', help='Encoder Type',
+                            choices=['inc', 'res'])
         parser.add_argument('--embed-size', help='Embedding Size', type=int)
         parser.add_argument('--batch-size', help='Batch size', type=int)
         parser.add_argument('--hidden-size', help='Hidden layer size', type=int)
@@ -235,7 +238,6 @@ class Main(object):
         print("[\033[31msbatch\033[0m] {:s}".format(path))
         os.system("sbatch {:s}".format(path))
 
-
     def get_transfroms(self):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
@@ -250,7 +252,7 @@ class Main(object):
         dataset = MemeDataset(self.data_dir, self.cap_file,
                               self.vocab, self.transforms['train'])
         dataset.load_dataset(self.num_samples)
-        self.logger.info('Dataset contains {:d} items.'.format(len(dataset)))
+        print('Dataset contains {:d} items.'.format(len(dataset)))
         return dataset
 
     def get_loader(self):
@@ -267,11 +269,11 @@ class Main(object):
     def get_vocabulary(self):
         vocab = Vocabulary()
         vocab.load_vocab(self.vocab_file, self.data_dir)
-        self.logger.info('Vocabulary contains {} words'.format(vocab.length))
+        print('Vocabulary contains {} words'.format(vocab.length))
         return vocab
 
     def prepare_models(self):
-        self.encoder = Encoder(self.embed_size)
+        self.encoder = Encoder(self.embed_size, self.encoder_type)
         self.decoder = Decoder(self.embed_size, self.hidden_size,
                                self.vocab, self.lstm_layers,
                                pre_trained_embed=self.pretrain_embed,
@@ -281,18 +283,42 @@ class Main(object):
     def generate_title(self):
         # TODO: add v_thresh as commandline argument.
         self.v_thresh = 2
-        self.encoder_type = 'inc'
         title = 'MCG_{:s}_{:d}_{:d}_{:d}_{:d}_{:s}'.format(
             self.encoder_type, self.embed_size,
             self.hidden_size, self.lstm_layers,
             self.v_thresh,
             self.pretrain_embed if self.pretrain_embed else '0')
-        self.logger.info(title)
+        print(title)
         return title
+
+    def generate_image_embeddings(self):
+        model = models.inception_v3(pretrained=True)
+        in_size = model.fc.in_features
+        model.fc = torch.nn.Identity(in_size, in_size)
+
+        image_dir = os.path.join(self.data_dir, 'memes')
+        image_list = os.listdir(image_dir)
+        img_embeddings = torch.empty(len(image_list), 2048)
+
+        for i, img in enumerate(image_list):
+            print(i, img)
+            img = Image.open(os.path.join(image_dir, img)).convert('RGB')
+            img = self.transforms['train'](img)
+            img = img.unsqueeze(0)
+            model.eval()
+            embed = model(img)
+            print(embed)
+            print(embed.shape, flush=True)
+            img_embeddings[i][:] = embed[0][:]
+
+        torch.save(img_embeddings,
+            os.path.join(self.data_dir, self.encoder_type + '.pkl')
+        )
 
     def train_minibatch(self):
         batch_loss = 0
         for i, (images, captions, lengths) in enumerate(self.loader):
+            print('Step {}/{} of mini-batch'.format(i, len(self.loader)))
             images.to(self.device)
             captions.to(self.device)
             lengths.to(self.device)
@@ -325,7 +351,7 @@ class Main(object):
 
         for epoch in range(self.num_epochs):
             loss = self.train_minibatch()
-            logging.info('Epoch {}/{} Loss {}'.format(
+            print('Epoch {}/{} Loss {}'.format(
                 epoch, self.num_epochs, loss
             ))
             if loss < best_loss:
@@ -359,7 +385,7 @@ class Main(object):
             feature = feature.unsqueeze(1)
             caption = self.decoder.sample(feature, self.max_len)
             caption = [self.vocab.idx2word[i] for i in caption]
-            logging.info(caption)
+            print(caption)
 
 
 if __name__ == "__main__":

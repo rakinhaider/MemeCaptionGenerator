@@ -4,12 +4,16 @@ import torch
 
 
 class Encoder(nn.Module):
-    def __init__(self, embed_size):
+    def __init__(self, embed_size, encoder_type):
         super(Encoder, self).__init__()
         self.embed_size = embed_size
-        self.conv_net = models.inception_v3()
-        in_size = self.conv_net.fc.in_features
-        self.conv_net.fc = nn.Identity(in_size, in_size)
+        if encoder_type == 'inc':
+            self.conv_net = models.inception_v3(pretrained=True)
+            in_size = self.conv_net.fc.in_features
+            self.conv_net.fc = nn.Identity(in_size, in_size)
+        elif encoder_type == 'res':
+            self.conv_net = models.resnet34(pretrained=True)
+            # TODO: fix the last layer.
         for param in self.conv_net.parameters():
             param.requires_grad = False
         self.linear = nn.Linear(in_size, embed_size)

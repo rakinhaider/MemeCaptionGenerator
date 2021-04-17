@@ -32,8 +32,18 @@ class TestMemeDataset(unittest.TestCase):
 
     def test_load_dataset(self):
         vocab = Vocabulary()
+        vocab.load_vocab('test_vocab.pkl', '../data/')
+        md = MemeDataset('../data/', 'test_captions.txt', vocab)
+        md.load_dataset(-1)
+        assert len(md) == 4
+        assert md.id2index == {
+            'y-u-no': 0, 'dont-you-squidward': 1,
+            'why-cant-i-hold-all-these': 2, 'i-dont-know-who-you-are': 3
+        }
+
+    def test_load_dataset_full(self):
+        vocab = Vocabulary()
         vocab.load_vocab('vocab_2_CaptionsClean_nopunc_t.pkl', '../data/')
         md = MemeDataset('../data/', 'CaptionsClean_nopunc_-1_t.txt', vocab)
         md.load_dataset(-1)
-
-        print(len(md))
+        assert len(md) == 394549

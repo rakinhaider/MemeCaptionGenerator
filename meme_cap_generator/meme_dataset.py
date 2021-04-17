@@ -1,4 +1,4 @@
-import os
+git import os
 import logging
 logger = logging.getLogger(__name__)
 import nltk
@@ -10,17 +10,22 @@ import string
 
 
 class MemeDataset(data.Dataset):
-    def __init__(self, image_dir, caption_file, vocab, transform=None):
-        self.image_dir = image_dir
-        self.caption_file = os.path.join(image_dir, caption_file)
+    def __init__(self, data_dir, caption_file, vocab, transform=None):
+        self.data_dir = data_dir
+        self.caption_file = os.path.join(data_dir, caption_file)
         self.vocab = vocab
         self.img_captions = []
         self.ids = []
+        self.id2index = {}
         self.captions = []
         self.transform = transform
         self.max_len = -1
 
     def load_dataset(self, num_samples):
+        image_list = os.listdir(os.path.join(self.data_dir, 'memes'))
+        for i, img in enumerate(image_list):
+            self.id2index[img] = i
+
         with open(self.caption_file) as f:
             for line in f:
                 splits = line.split(' - ')
@@ -33,10 +38,7 @@ class MemeDataset(data.Dataset):
                 img_name = img_name.replace(' ', '-')
                 img_name = img_name.replace('--', '-')
 
-                img_path = os.path.join(self.image_dir, 'memes',
-                                        img_name + '.jpg')
-                if not os.path.exists(img_path):
-                    print(img_path)
+                if self.id2index.get(img_name, None):
                     continue
 
                 caption = splits[1]
@@ -62,7 +64,7 @@ class MemeDataset(data.Dataset):
         id = self.ids[index]
         caption = self.captions[index]
 
-        image = Image.open(os.path.join(self.image_dir,
+        image = Image.open(os.path.join(self.data_dir,
                                         'memes',
                                         id + '.jpg'))
         image = image.convert('RGB')
@@ -70,7 +72,7 @@ class MemeDataset(data.Dataset):
             image = self.transform(image)
         else:
             image = transforms.ToTensor()(image)
-        return image, caption
+        return torch.tensor(self.id2index[id]), caption
 
 
 def collate_memes(data):
