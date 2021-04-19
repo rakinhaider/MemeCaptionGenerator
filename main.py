@@ -268,7 +268,7 @@ class Main(object):
         dataset = MemeDataset(self.data_dir, self.cap_file,
                               self.vocab, self.transforms['train'])
         dataset.load_dataset(self.num_samples)
-        print('Dataset contains {:d} items.'.format(len(dataset)))
+        print('Dataset contains {:d} items.'.format(len(dataset)), flush=True)
         return dataset
 
     def get_loader(self):
@@ -341,7 +341,8 @@ class Main(object):
         batch_loss = 0
         i = 0
         for images, captions, lengths in self.loader:
-            print('Step {}/{} of mini-batch'.format(i, len(self.loader)))
+            print('Step {}/{} of mini-batch'.format(i, len(self.loader)),
+                  flush=True)
             images.to(self.device)
             captions.to(self.device)
             lengths.to(self.device)

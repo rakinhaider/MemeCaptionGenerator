@@ -1,6 +1,5 @@
 import os
 import logging
-
 logger = logging.getLogger(__name__)
 import nltk
 from PIL import Image
@@ -64,14 +63,13 @@ class MemeDataset(data.Dataset):
                     continue
                 self.ids.append(img_name)
                 self.captions.append(caption)
-                if len(self.ids) == num_samples:
+                if self.max_len < len(caption):
+                    self.max_len = len(caption)
+                if i >= num_samples:
                     break
                 elif i % 1000 == 0:
-                    print('\rData read {:d}'.format(i), end='')
+                    print('\rData read {:d}'.format(i), end='', flush=True)
                 i += 1
-
-        print()
-        self.max_len = max([len(c) for c in self.captions])
 
     def __len__(self):
         return len(self.ids)

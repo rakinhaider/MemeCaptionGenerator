@@ -24,7 +24,6 @@ class Encoder(nn.Module):
     def forward(self, image):
         with torch.no_grad():
             features = self.embedding(image)
-            # print(features.shape)
         return self.linear(features)
 
 
