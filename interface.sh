@@ -8,31 +8,30 @@
 # It will automatically generate `sbatch` submission file and submit, so you
 # do not need to write submission commands by yourself.
 # To run on GPU, replace device variable from "cpu" to "cuda".
-sbatch=""
+sbatch="--sbatch"
 data_dir="data/"
 seed="0"
 workers="2"
-device="cpu"
+device="cuda"
 num_samples=100000
 
 # Task specified configurations.
-epochs="100"
+epochs="20"
 
 # Meme Caption Generator Train
 if [ "$1" = "gen_embed" ]; then
     python main.py ${sbatch} --num-workers ${workers}\
         -g --data-dir ${data_dir} \
-        -cf 'CaptionsClean_nopunc_-1_t.txt'\
+        -cf 'CaptionsClean_nopunc_-1_t_s.txt'\
         --device ${device} --encoder-type 'inc'
 fi;
 
 # Meme Caption Generator Train
 if [ "$1" = "embed_size" ]; then
     for embed_size in 50 300 500; do
-        echo 'working'
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
-            -cf 'CaptionsClean_nopunc_-1_t.txt' \
+            -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size ${embed_size} --batch-size 512 --lstm-layers 3\
@@ -45,7 +44,7 @@ if [ "$1" = "hidden_size" ]; then
     for hidden_size in 50 300 500; do
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
-            -cf 'CaptionsClean_nopunc_-1_t.txt' \
+            -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size 300 --batch-size 32 --lstm-layers 3\
@@ -58,7 +57,7 @@ if [ "$1" = "threshold" ]; then
     for thresh in 2 3 4; do
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
-            -cf 'CaptionsClean_nopunc_-1_t.txt' \
+            -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_${threshold}_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size 300 --batch-size 32 --lstm-layers 3\
