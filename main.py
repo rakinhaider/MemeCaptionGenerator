@@ -186,6 +186,18 @@ class Main(object):
         sbatch_lines.append("#SBATCH --job-name {:s}".format(self.title))
         sbatch_lines.append("#SBATCH --time=60:00")
 
+        # Memory limit
+        sbatch_lines.append("#SBATCH --mem-per-cpu=8G")
+
+        # Set up notifications
+        # send email when job begins
+        sbatch_lines.append('#SBATCH --mail-type=begin')
+        # send email when job ends
+        sbatch_lines.append('#SBATCH --mail-type=end')
+        # send email if job fails
+        sbatch_lines.append('#SBATCH --mail-type=fail')
+        sbatch_lines.append('#SBATCH --mail-user=chaider@purdue.edu')
+
         # IO redirection.
         sbatch_lines.append(
             "#SBATCH --output {:s}".format(
