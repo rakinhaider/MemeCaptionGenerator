@@ -13,10 +13,11 @@ data_dir="data/"
 seed="0"
 workers="2"
 device="cuda"
-num_samples=100000
+batch_size=512
+num_samples=50000
 
 # Task specified configurations.
-epochs="100"
+epochs="20"
 
 # Meme Caption Generator Train
 if [ "$1" = "gen_embed" ]; then
@@ -35,7 +36,8 @@ if ([ "$1" = "embed_size" ]) && ([ "$2" = "" ]); then
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
-            --embed-size ${embed_size} --batch-size 32 --lstm-layers 3\
+            --embed-size ${embed_size} --batch-size ${batch_size} \
+            --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size 50
 			  # >logs/MCG_inc_${embed_size}_50_3_2_0/output
 			  break
@@ -51,7 +53,8 @@ if ([ "$1" = "embed_size" ]) && ([ "$2" = "glove" ]); then
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --pretrained-embed g \
             -e 10 --device ${device} --random-seed ${seed}\
-            --embed-size ${embed_size} --batch-size 32 --lstm-layers 3\
+            --embed-size ${embed_size} --batch-size ${batch_size} \
+            --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size 50
         # >logs/MCG_inc_${embed_size}_50_3_2_0/output
         break
@@ -65,7 +68,8 @@ if [ "$1" = "hidden_size" ]; then
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
-            --embed-size 300 --batch-size 32 --lstm-layers 3\
+            --embed-size 300 --batch-size ${batch_size} \
+            --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size ${hidden_size}
         break
     done
@@ -78,7 +82,8 @@ if [ "$1" = "threshold" ]; then
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_${threshold}_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
-            --embed-size 300 --batch-size 32 --lstm-layers 3\
+            --embed-size 300 --batch-size ${batch_size} \
+            --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size ${hidden_size}
         break
     done
@@ -90,7 +95,8 @@ if ([ "$1" = "sample" ]) && ([ "$2" = "" ]); then
         -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
         --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
         --device ${device}\
-        --embed-size 50 --batch-size 32 --lstm-layers 3\
+        --embed-size 50 --batch-size ${batch_size} \
+        --lstm-layers 3 \
         --hidden-size 50\
         --sample-images 90s-problems.jpg #aint-nobody-got-time-fo-dat.jpg\
         #success-kid.jpg sparta.jpg socially-awesome-penguin.jpg spock.jpg\
@@ -103,7 +109,8 @@ if ([ "$1" = "sample" ]) && ([ "$2" = "glove" ]); then
         -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
         --pretrained-embed g \
         --device ${device}\
-        --embed-size 50 --batch-size 32 --lstm-layers 3\
+        --embed-size 50 --batch-size ${batch_size} \
+        --lstm-layers 3 \
         --hidden-size 50 \
         --sample-images success-kid.jpg #aint-nobody-got-time-fo-dat.jpg\
         #90s-problems.jpg sparta.jpg socially-awesome-penguin.jpg spock.jpg\

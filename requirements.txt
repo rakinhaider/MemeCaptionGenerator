@@ -4,3 +4,4 @@ gensim
 gitpython
 language_tool_python
 pyemd
+progressbar
