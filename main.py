@@ -5,7 +5,6 @@ from meme_cap_generator.decoder import Decoder
 from meme_cap_generator.meme_dataset import collate_memes
 import argparse
 import torch
-import torch.optim as optim
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms
 from torchvision import models
@@ -401,13 +400,13 @@ class Main(object):
                     'encoder': deepcopy(self.encoder.state_dict()),
                     'decoder': deepcopy(self.decoder.state_dict())
                 }
+                for model in ['encoder', 'decoder']:
+                    torch.save(
+                        {key: val.cpu() for key, val in
+                         best_model_dict[model].items()},
+                        os.path.join('logs', self.title, model + '_best.pt')
+                    )
             # break
-
-        for model in ['encoder', 'decoder']:
-            torch.save(
-                {key: val.cpu() for key, val in best_model_dict[model].items()},
-                os.path.join('logs', self.title, model + '_best.pt')
-            )
 
     def sample_caption(self):
         path = os.path.join('logs', self.title, 'encoder_best.pt')

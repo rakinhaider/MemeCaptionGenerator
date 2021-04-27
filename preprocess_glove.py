@@ -3,7 +3,7 @@ import argparse
 import torch
 import pickle
 import os
-import progressbar
+from utils import MyProgressBar
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -17,14 +17,7 @@ if __name__ == "__main__":
     vectors = []
 
     file_name = '{:s}/raw/glove.6B.{:d}d.txt'.format(args.dir, args.dim)
-    widgets = [
-        'Loading',
-        progressbar.Bar(),
-        progressbar.Percentage()
-    ]
-    bar = progressbar.ProgressBar(maxval=os.path.getsize(file_name),
-                                  widgets=widgets)
-    bar.start()
+    bar = MyProgressBar(os.path.getsize(file_name))
     with open(file_name, 'rb') as f:
         for l in f:
             line = l.decode().split()
@@ -32,10 +25,9 @@ if __name__ == "__main__":
             word2idx[word] = idx
             idx2word[idx] = word
             idx += 1
-            # vect = np.array(line[1:]).astype(np.float)
             vect = [np.float(f) for f in line[1:]]
             vectors.append(vect)
-            bar.update(bar.currval + len(l))
+            bar.update(len(l))
             # break
     bar.finish()
     vectors = torch.tensor(vectors)

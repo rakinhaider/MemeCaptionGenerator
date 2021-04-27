@@ -2,11 +2,10 @@ import os
 import logging
 logger = logging.getLogger(__name__)
 import nltk
-from PIL import Image
 from torch.utils import data as data
 import torch
-from torchvision import transforms
 import string
+from utils import MyProgressBar
 
 
 class MemeDataset(data.Dataset):
@@ -34,7 +33,10 @@ class MemeDataset(data.Dataset):
     def load_captions(self, num_samples):
         with open(self.caption_file) as f:
             i = 0
+            total_size = os.path.getsize(self.caption_file)
+            bar = MyProgressBar(total_size)
             for line in f:
+                bar.update(len(line))
                 splits = line.split(' - ')
                 # TODO: Should have modified it when vocabulary was updated.
                 #  Doing here anyway. Should be removed.
@@ -65,8 +67,6 @@ class MemeDataset(data.Dataset):
                             break
                 if i == num_samples:
                     break
-                elif i % 1000 == 0:
-                    print('\rData read {:d}'.format(i), end='', flush=True)
                 i += 1
 
                 if unk_count == 2:
@@ -75,6 +75,7 @@ class MemeDataset(data.Dataset):
                 self.captions.append(caption)
                 if self.max_len < len(caption):
                     self.max_len = len(caption)
+            bar.finish()
 
     def __len__(self):
         return len(self.ids)
