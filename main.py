@@ -184,7 +184,7 @@ class Main(object):
 
         # Time limit.
         sbatch_lines.append("#SBATCH --job-name {:s}".format(self.title))
-        sbatch_lines.append("#SBATCH --time=60:00")
+        sbatch_lines.append("#SBATCH --time=240:00")
 
         # Memory limit
         sbatch_lines.append("#SBATCH --mem-per-cpu=8G")
@@ -364,14 +364,13 @@ class Main(object):
         params = list(self.decoder.parameters())
         params += list(self.encoder.linear.parameters())
         self.optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+        self.step = 0
 
     def train_minibatch(self):
         print('minibatch start')
         batch_loss = 0
         i = 0
         for images, captions, lengths in self.loader:
-            print('Step {}/{} of mini-batch'.format(i, len(self.loader)),
-                  flush=True)
             self.encoder.zero_grad()
             self.decoder.zero_grad()
             images.to(self.device)
@@ -387,7 +386,10 @@ class Main(object):
             batch_loss += loss
             loss.backward()
             self.optimizer.step()
-            i += 1
+            self.step += 1
+            print('Step {}/{} of mini-batch, Loss {}'.format(
+                self.step, len(self.loader) * (self.num_epochs + 1), loss
+            ), flush=True)
 
         return batch_loss/len(self.loader)
 

@@ -13,7 +13,7 @@ data_dir="data/"
 seed="0"
 workers="2"
 device="cuda"
-batch_size=512
+batch_size=1024
 num_samples=50000
 
 # Task specified configurations.
