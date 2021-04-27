@@ -45,6 +45,8 @@ class Main(object):
         self.lstm_layers = self.args.lstm_layers
         self.pretrained_embed = self.args.pretrained_embed
 
+        self.v_thresh = 2
+
         self.device = self.args.device
         self.debug = self.args.debug
 
@@ -242,9 +244,16 @@ class Main(object):
 
         if not self.gen:
 
-            sbatch_lines.append(
-                "   --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \\"
-            )
+            if self.pretrained_embed:
+                sbatch_lines.append(
+                    "   --pretrained-embed g \\"
+                )
+            else:
+                vocab_file_name = "vocab_{}_CaptionsClean_nopunc_t.pkl"
+                vocab_file_name = vocab_file_name.format(self.v_thresh)
+                sbatch_lines.append(
+                    "   --vocab-file {} \\".format(vocab_file_name)
+                )
             sbatch_lines.append(
                 "   -e {:d}\\".format(self.num_epochs)
             )
@@ -322,7 +331,6 @@ class Main(object):
             title = self.encoder_type
         # TODO: add v_thresh as commandline argument.
         else:
-            self.v_thresh = 2
             title = 'MCG_{:s}_{:d}_{:d}_{:d}_{:d}_{:s}'.format(
                 self.encoder_type, self.embed_size,
                 self.hidden_size, self.lstm_layers,
@@ -414,6 +422,7 @@ class Main(object):
                     'encoder': deepcopy(self.encoder.state_dict()),
                     'decoder': deepcopy(self.decoder.state_dict())
                 }
+                print(os.path.join('logs', self.title))
                 for model in ['encoder', 'decoder']:
                     torch.save(
                         {key: val.cpu() for key, val in

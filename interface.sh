@@ -29,8 +29,9 @@ fi;
 
 # Meme Caption Generator Train
 if ([ "$1" = "embed_size" ]) && ([ "$2" = "" ]); then
-    for embed_size in 50 200 300; do
-        echo embed_size
+    for embed_size in 50 100 200 300; do
+        echo $embed_size
+        echo $batch_size
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
@@ -46,13 +47,14 @@ fi;
 
 if ([ "$1" = "embed_size" ]) && ([ "$2" = "glove" ]); then
     echo $2
-    for embed_size in 50 200 300; do
-        echo embed_size
+    for embed_size in 50 100 200 300; do
+        echo $embed_size
+        echo $batch_size
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --pretrained-embed g \
-            -e 10 --device ${device} --random-seed ${seed}\
+            -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size ${embed_size} --batch-size ${batch_size} \
             --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size 50
@@ -61,12 +63,14 @@ if ([ "$1" = "embed_size" ]) && ([ "$2" = "glove" ]); then
     done
 fi;
 
-if [ "$1" = "hidden_size" ]; then
+if ([ "$1" = "hidden_size" ]) && ([ "$2" = "glove" ]); then
     for hidden_size in 50 300 500; do
+        echo $hidden_size
+        echo $batch_size
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
-            --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
+            --pretrained-embed g \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size 300 --batch-size ${batch_size} \
             --lstm-layers 3 \
