@@ -22,7 +22,7 @@ class Vocabulary(object):
     def __len__(self):
         return len(self.word2idx)
 
-    def load_vocab(self, file_name='vocab.pkl', data_dir=None):
+    def load_vocab(self, file_name, data_dir=None):
         file_name = os.path.join(data_dir, file_name)
         f = open(file_name, 'rb')
         vocab = pickle.load(f)

@@ -18,15 +18,23 @@ def download_file(base_url, file_name, out_dir_name):
         pass
 
 
-def download_word_embedding(args):
-    base_url = 'https://s3.amazonaws.com/dl4j-distribution/'
-    name = 'GoogleNews-vectors-negative300.bin'
-    dir_name = args.data
-    download_file(base_url, name + '.gz', dir_name)
-    if not os.path.exists(dir_name + name):
-        with gzip.open(dir_name + name + '.gz', 'rb') as f_in:
-            with open(dir_name + name, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+def download_word_embedding(args, embedding_name):
+    if embedding_name == 'google':
+        base_url = 'https://s3.amazonaws.com/dl4j-distribution/'
+        name = 'GoogleNews-vectors-negative300.bin'
+        dir_name = args.data
+        download_file(base_url, name + '.gz', dir_name)
+        if not os.path.exists(dir_name + name):
+            with gzip.open(dir_name + name + '.gz', 'rb') as f_in:
+                with open(dir_name + name, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+    elif embedding_name == 'glove':
+        base_url = 'http://nlp.stanford.edu/data/'
+        name = 'glove.6B'
+        dir_name = args.data
+        download_file(base_url, name + '.zip', dir_name)
+        with zipfile.ZipFile(dir_name + '/' + name + '.zip', "r") as zip_ref:
+            zip_ref.extractall(dir_name + '/glove/raw')
 
 
 def download_memes(args):
@@ -63,14 +71,21 @@ if __name__ == "__main__":
                         help='Download memes, captions, word embedding.')
     parser.add_argument('--what', choices=['meme', 'caption', 'embedding'],
                         help='Specifies what to download.)')
+    parser.add_argument('--emb', choices=['google', 'glove'],
+                        help='Specifies which embedding to download.)')
     args = parser.parse_args()
 
     if args.all:
-        download_word_embedding(args)
+        download_word_embedding(args, 'google')
+        download_word_embedding(args, 'glove')
         download_memes(args)
     elif args.what == 'meme':
         download_memes(args)
     elif args.what == 'captions':
         download_captions(args)
     elif args.what == 'embedding':
-        download_word_embedding(args)
+        if args.emb == 'google':
+            download_word_embedding(args, 'google')
+        elif args.emb == 'glove':
+            download_word_embedding(args, 'glove')
+

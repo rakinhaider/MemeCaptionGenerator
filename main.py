@@ -1,5 +1,5 @@
 import os
-from meme_cap_generator import MemeDataset, Vocabulary
+from meme_cap_generator import MemeDataset, Vocabulary, GloveVocabulary
 from meme_cap_generator.encoder import Encoder
 from meme_cap_generator.decoder import Decoder
 from meme_cap_generator.meme_dataset import collate_memes
@@ -44,7 +44,7 @@ class Main(object):
         self.batch_size = self.args.batch_size
         self.hidden_size = self.args.hidden_size
         self.lstm_layers = self.args.lstm_layers
-        self.pretrain_embed = self.args.pretrained_embed
+        self.pretrained_embed = self.args.pretrained_embed
 
         self.device = self.args.device
         self.debug = self.args.debug
@@ -54,6 +54,7 @@ class Main(object):
         self.rng_cpu.manual_seed(self.random_seed)
         self.rng_gpu.manual_seed(self.random_seed)
 
+    def main(self):
         print(2)
         self.title = self.generate_title()
         os.makedirs(
@@ -75,14 +76,20 @@ class Main(object):
         self.vocab = self.get_vocabulary()
         print('5')
         self.prepare_models()
+        print('6')
+        self.dataset = self.get_dataset()
         if self.train:
-            print('6')
-            self.dataset = self.get_dataset()
+            print('num_samples', self.num_samples)
+            self.dataset.load_dataset(self.num_samples)
+            print('Dataset contains {:d} items.'.format(
+                len(self.dataset)), flush=True)
+
             print('7')
             self.loader = self.get_loader()
 
             self.fit()
         elif self.sample:
+            self.dataset.load_image_ids()
             self.sample_caption()
 
     def add_arguments(self):
@@ -104,8 +111,11 @@ class Main(object):
                             default='data/')
         parser.add_argument('-cf', '--cap-file', help='Caption file')
 
-        parser.add_argument('--vocab-file', help='Vocabulary File')
-        parser.add_argument('--embed-file', help='Use pretrained embedding')
+        # Vocabulary arguments
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--vocab-file', help='Vocabulary File')
+        group.add_argument('--pretrained-embed', choices=['g', 't'],
+                           help='Use pretrained embedding')
 
         # Train Paramters
         parser.add_argument('--sbatch', help='Run using sbatch',
@@ -120,6 +130,7 @@ class Main(object):
                             type=int, default=-1)
         parser.add_argument('-lr', '--learning-rate', help='Learning Rate',
                             type=float, default=10**(-4))
+        parser.add_argument('--embed-file', help='Use pretrained embedding')
 
         # Sample Parameters
         parser.add_argument('--sample-images', nargs='+', default=[],
@@ -129,14 +140,14 @@ class Main(object):
         # Model Parameters
         parser.add_argument('--encoder-type', help='Encoder Type',
                             default='inc', choices=['inc', 'res'])
-        parser.add_argument('--embed-size', help='Embedding Size', type=int)
-        parser.add_argument('--batch-size', help='Batch size', type=int)
-        parser.add_argument('--hidden-size', help='Hidden layer size', type=int)
-        parser.add_argument('--lstm-layers', help='LSTM layers', type=int)
-
-        parser.add_argument('--pretrained-embed', choices=['g', 't'],
-                            default=None,
-                            help='Use pretrained embedding')
+        parser.add_argument('--embed-size', help='Embedding Size',
+                            type=int, default=50)
+        parser.add_argument('--batch-size', help='Batch size',
+                            type=int, default=32)
+        parser.add_argument('--hidden-size', help='Hidden layer size',
+                            type=int, default=50)
+        parser.add_argument('--lstm-layers', help='LSTM layers',
+                            type=int, default=3)
 
     def sbatch_submit(self) -> None:
         r"""
@@ -267,21 +278,23 @@ class Main(object):
     def get_dataset(self):
         dataset = MemeDataset(self.data_dir, self.cap_file,
                               self.vocab, self.transforms['train'])
-        dataset.load_dataset(self.num_samples)
-        print('Dataset contains {:d} items.'.format(len(dataset)), flush=True)
         return dataset
 
     def get_loader(self):
         loader = DataLoader(self.dataset, batch_size=self.batch_size,
-                            shuffle=True, num_workers=0,
+                            shuffle=True, num_workers=8,
                             drop_last=True, collate_fn=collate_memes,
-                            pin_memory=False)
+                            pin_memory=True)
 
         return loader
 
     def get_vocabulary(self):
-        vocab = Vocabulary()
-        vocab.load_vocab(self.vocab_file, self.data_dir)
+        if self.pretrained_embed:
+            vocab = GloveVocabulary(dim=self.embed_size)
+            vocab.load_vocab('glove.6B', self.data_dir)
+        else:
+            vocab = Vocabulary()
+            vocab.load_vocab(self.vocab_file, self.data_dir)
         print('Vocabulary contains {} words'.format(vocab.length))
         return vocab
 
@@ -290,9 +303,8 @@ class Main(object):
                                self.data_dir)
         self.decoder = Decoder(self.embed_size, self.hidden_size,
                                self.vocab, self.lstm_layers,
-                               pre_trained_embed=self.pretrain_embed,
-                               pre_trained_embed_file=self.embed_file
-                               )
+                               pre_trained_embed=self.pretrained_embed,
+                               data_dir=self.data_dir)
 
     def generate_title(self):
         if self.gen:
@@ -304,7 +316,7 @@ class Main(object):
                 self.encoder_type, self.embed_size,
                 self.hidden_size, self.lstm_layers,
                 self.v_thresh,
-                self.pretrain_embed if self.pretrain_embed else '0')
+                self.pretrained_embed if self.pretrained_embed else '0')
             print(title)
         return title
 
@@ -336,6 +348,12 @@ class Main(object):
             os.path.join(self.data_dir, self.encoder_type + '.pkl')
         )
 
+    def prepare_trainer(self):
+        self.criterion = torch.nn.CrossEntropyLoss()
+        params = list(self.decoder.parameters())
+        params += list(self.encoder.linear.parameters())
+        self.optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+
     def train_minibatch(self):
         print('minibatch start')
         batch_loss = 0
@@ -343,6 +361,8 @@ class Main(object):
         for images, captions, lengths in self.loader:
             print('Step {}/{} of mini-batch'.format(i, len(self.loader)),
                   flush=True)
+            self.encoder.zero_grad()
+            self.decoder.zero_grad()
             images.to(self.device)
             captions.to(self.device)
             lengths.to(self.device)
@@ -354,8 +374,6 @@ class Main(object):
                                            enforce_sorted=False)
             loss = self.criterion(prediction, targets.data)
             batch_loss += loss
-            self.encoder.zero_grad()
-            self.decoder.zero_grad()
             loss.backward()
             self.optimizer.step()
             i += 1
@@ -364,10 +382,7 @@ class Main(object):
 
     def fit(self):
         print('Training started.')
-        self.criterion = torch.nn.CrossEntropyLoss()
-        params = list(self.decoder.parameters())
-        params += list(self.encoder.linear.parameters())
-        self.optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+        self.prepare_trainer()
 
         print('0 minibatch')
         loss = self.train_minibatch()
@@ -402,17 +417,15 @@ class Main(object):
 
         for img_file in self.sample_images:
             print(img_file)
-            img_file = os.path.join(self.data_dir, 'memes/', img_file)
-            img = Image.open(img_file).convert('RGB')
-            img.show()
-            img = self.transforms['test'](img)
-            img = img.unsqueeze(0)
-            feature = self.encoder(img)
+            name, ext = os.path.splitext(img_file)
+            index = torch.tensor([self.dataset.id2index[name]])
+            feature = self.encoder(index)
             feature = feature.unsqueeze(1)
             caption = self.decoder.sample(feature, self.max_len)
+            print(caption)
             caption = [self.vocab.idx2word[i] for i in caption]
             print(caption)
 
 
 if __name__ == "__main__":
-    Main()
+    Main().main()

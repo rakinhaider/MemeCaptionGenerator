@@ -1,0 +1,8 @@
+python downloads.py --what embedding --emb glove
+
+python downloads.py --what embedding --emb google
+
+python preprocess_glove.py --dim 50
+python preprocess_glove.py --dim 100
+python preprocess_glove.py --dim 200
+python preprocess_glove.py --dim 300

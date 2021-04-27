@@ -51,4 +51,10 @@ class TestMemeDataset(unittest.TestCase):
         md = MemeDataset('../data/', 'CaptionsClean_nopunc_-1_t.txt', vocab)
         md.load_dataset(-1)
         print(len(md))
-        assert len(md) == 387260
+        assert len(md) == 381697
+        for c in md.captions:
+            count = 0
+            for w_index in c:
+                if w_index == vocab('<unk>'):
+                    count += 1
+            assert count <= 2

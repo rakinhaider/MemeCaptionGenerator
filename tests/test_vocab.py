@@ -23,8 +23,7 @@ class TestVocab(unittest.TestCase):
 
     def test_save_vocab(self):
         vocab_load = Vocabulary()
-        vocab_load.load_vocab(file_name='test_vocab.pkl',
-                              data_dir='../data')
+        vocab_load.load_vocab(file_name='test_vocab.pkl', data_dir='../data')
         assert vocab_load.length == self.length
         assert vocab_load.word2idx == self.w2i
         assert vocab_load.idx2word == self.i2w

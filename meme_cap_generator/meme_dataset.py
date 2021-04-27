@@ -22,11 +22,16 @@ class MemeDataset(data.Dataset):
         self.max_len = -1
 
     def load_dataset(self, num_samples):
+        self.load_image_ids()
+        self.load_captions(num_samples)
+
+    def load_image_ids(self):
         image_list = os.listdir(os.path.join(self.data_dir, 'memes'))
         for i, img in enumerate(image_list):
             name, ext = os.path.splitext(img)
             self.id2index[name] = i
 
+    def load_captions(self, num_samples):
         with open(self.caption_file) as f:
             i = 0
             for line in f:
@@ -51,25 +56,25 @@ class MemeDataset(data.Dataset):
                 caption = [self.vocab('<start>')] + caption
                 caption += [self.vocab('<end>')]
                 caption = torch.tensor(caption)
-                valid = False
                 unknown_word = self.vocab('<unk>')
+                unk_count = 0
                 for word in caption[1:-1]:
-                    if word != unknown_word:
-                        valid = True
-                if not valid:
-                    # print()
-                    # print(caption)
-                    # print(img_name)
+                    if word == unknown_word:
+                        unk_count += 1
+                        if unk_count == 2:
+                            break
+                if i == num_samples:
+                    break
+                elif i % 1000 == 0:
+                    print('\rData read {:d}'.format(i), end='', flush=True)
+                i += 1
+
+                if unk_count == 2:
                     continue
                 self.ids.append(img_name)
                 self.captions.append(caption)
                 if self.max_len < len(caption):
                     self.max_len = len(caption)
-                if i >= num_samples:
-                    break
-                elif i % 1000 == 0:
-                    print('\rData read {:d}'.format(i), end='', flush=True)
-                i += 1
 
     def __len__(self):
         return len(self.ids)

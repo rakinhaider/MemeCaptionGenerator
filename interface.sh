@@ -16,7 +16,7 @@ device="cuda"
 num_samples=100000
 
 # Task specified configurations.
-epochs="20"
+epochs="100"
 
 # Meme Caption Generator Train
 if [ "$1" = "gen_embed" ]; then
@@ -27,15 +27,33 @@ if [ "$1" = "gen_embed" ]; then
 fi;
 
 # Meme Caption Generator Train
-if [ "$1" = "embed_size" ]; then
-    for embed_size in 50 300 500; do
+if ([ "$1" = "embed_size" ]) && ([ "$2" = "" ]); then
+    for embed_size in 50 200 300; do
+        echo embed_size
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
             --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             -e ${epochs} --device ${device} --random-seed ${seed}\
-            --embed-size ${embed_size} --batch-size 512 --lstm-layers 3\
+            --embed-size ${embed_size} --batch-size 32 --lstm-layers 3\
             --num-samples ${num_samples} --debug --hidden-size 50
+			  # >logs/MCG_inc_${embed_size}_50_3_2_0/output
+			  break
+    done
+fi;
+
+if ([ "$1" = "embed_size" ]) && ([ "$2" = "glove" ]); then
+    echo $2
+    for embed_size in 50 200 300; do
+        echo embed_size
+        python main.py ${sbatch} --num-workers ${workers}\
+            -t --data-dir ${data_dir} \
+            -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
+            --pretrained-embed g \
+            -e 10 --device ${device} --random-seed ${seed}\
+            --embed-size ${embed_size} --batch-size 32 --lstm-layers 3\
+            --num-samples ${num_samples} --debug --hidden-size 50
+        # >logs/MCG_inc_${embed_size}_50_3_2_0/output
         break
     done
 fi;
@@ -67,8 +85,9 @@ if [ "$1" = "threshold" ]; then
 fi;
 
 # Meme Caption Generator Sample
-if [ "$1" = "sample" ]; then
+if ([ "$1" = "sample" ]) && ([ "$2" = "" ]); then
     python main.py -s --data-dir ${data_dir} \
+        -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
         --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
         --device ${device}\
         --embed-size 50 --batch-size 32 --lstm-layers 3\
@@ -77,4 +96,16 @@ if [ "$1" = "sample" ]; then
         #success-kid.jpg sparta.jpg socially-awesome-penguin.jpg spock.jpg\
         #what-if-i-told-you.jpg
 
+fi;
+
+if ([ "$1" = "sample" ]) && ([ "$2" = "glove" ]); then
+    python main.py -s --data-dir ${data_dir} \
+        -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
+        --pretrained-embed g \
+        --device ${device}\
+        --embed-size 50 --batch-size 32 --lstm-layers 3\
+        --hidden-size 50 \
+        --sample-images success-kid.jpg #aint-nobody-got-time-fo-dat.jpg\
+        #90s-problems.jpg sparta.jpg socially-awesome-penguin.jpg spock.jpg\
+        #what-if-i-told-you.jpg
 fi;

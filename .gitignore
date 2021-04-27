@@ -2,6 +2,7 @@
 
 data/test_*
 data/GoogleNews-vectors-negative300*
+data/glove*
 
 **/*pycache*/*
 **/logs/**
