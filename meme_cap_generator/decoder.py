@@ -28,10 +28,25 @@ class Decoder(nn.Module):
                 'glove.6B.' + str(self.embed_size) + '_dat.pkl'
             )
             with open(file_name, 'rb') as f:
-                embedding = pickle.load(f)
-            embedding = torch.vstack([embedding,
-                                     torch.rand((4, self.embed_size))])
-            assert embedding.shape == torch.Size([400004, 50])
+                glove = pickle.load(f)
+            file_name = os.path.join(
+                data_dir, 'glove', 'processed',
+                'glove.6B.' + str(self.embed_size) + '_w2i.pkl'
+            )
+            with open(file_name, 'rb') as f:
+                glove_w2i = pickle.load(f)
+            embedding = torch.zeros(len(self.vocab), self.embed_size)
+            for i in range(len(self.vocab)):
+                w = self.vocab.idx2word[i]
+                if w in glove_w2i:
+                    glove_index = glove_w2i[w]
+                    embedding[i][:] = glove[glove_index][:]
+                else:
+                    embedding[i][:] = torch.rand(1, self.embed_size)[0]
+                if w == 'the':
+                    print(embedding[i])
+            assert embedding.shape == torch.Size([self.vocab.length,
+                                                  self.embed_size])
         elif embed == 't':
             pass
         else:

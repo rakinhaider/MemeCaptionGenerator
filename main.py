@@ -113,10 +113,9 @@ class Main(object):
         parser.add_argument('-cf', '--cap-file', help='Caption file')
 
         # Vocabulary arguments
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument('--vocab-file', help='Vocabulary File')
-        group.add_argument('--pretrained-embed', choices=['g', 't'],
-                           help='Use pretrained embedding')
+        parser.add_argument('--vocab-file', help='Vocabulary File')
+        parser.add_argument('--pretrained-embed', choices=['g', 't'],
+                           help='Use pretrained embedding', default=None)
 
         # Train Paramters
         parser.add_argument('--sbatch', help='Run using sbatch',
@@ -244,15 +243,14 @@ class Main(object):
 
         if not self.gen:
 
+            vocab_file_name = "vocab_{}_CaptionsClean_nopunc_t.pkl"
+            vocab_file_name = vocab_file_name.format(self.v_thresh)
+            sbatch_lines.append(
+                "   --vocab-file {} \\".format(vocab_file_name)
+            )
             if self.pretrained_embed:
                 sbatch_lines.append(
                     "   --pretrained-embed g \\"
-                )
-            else:
-                vocab_file_name = "vocab_{}_CaptionsClean_nopunc_t.pkl"
-                vocab_file_name = vocab_file_name.format(self.v_thresh)
-                sbatch_lines.append(
-                    "   --vocab-file {} \\".format(vocab_file_name)
                 )
             sbatch_lines.append(
                 "   -e {:d}\\".format(self.num_epochs)
@@ -309,12 +307,16 @@ class Main(object):
         return loader
 
     def get_vocabulary(self):
+        """
         if self.pretrained_embed:
             vocab = GloveVocabulary(dim=self.embed_size)
             vocab.load_vocab('glove.6B', self.data_dir)
         else:
             vocab = Vocabulary()
             vocab.load_vocab(self.vocab_file, self.data_dir)
+        """
+        vocab = Vocabulary()
+        vocab.load_vocab(self.vocab_file, self.data_dir)
         print('Vocabulary contains {} words'.format(vocab.length))
         return vocab
 

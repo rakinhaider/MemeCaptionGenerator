@@ -12,7 +12,7 @@ sbatch="--sbatch"
 data_dir="data/"
 seed="0"
 workers="2"
-device="cuda"
+device="cpu"
 batch_size=1024
 num_samples=50000
 
@@ -53,6 +53,7 @@ if ([ "$1" = "embed_size" ]) && ([ "$2" = "glove" ]); then
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
+            --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             --pretrained-embed g \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size ${embed_size} --batch-size ${batch_size} \
@@ -70,6 +71,7 @@ if ([ "$1" = "hidden_size" ]) && ([ "$2" = "glove" ]); then
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
+            --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
             --pretrained-embed g \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size 300 --batch-size ${batch_size} \
@@ -111,6 +113,7 @@ fi;
 if ([ "$1" = "sample" ]) && ([ "$2" = "glove" ]); then
     python main.py -s --data-dir ${data_dir} \
         -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
+        --vocab-file vocab_2_CaptionsClean_nopunc_t.pkl \
         --pretrained-embed g \
         --device ${device}\
         --embed-size 50 --batch-size ${batch_size} \
