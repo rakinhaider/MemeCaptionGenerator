@@ -40,8 +40,6 @@ if ([ "$1" = "embed_size" ]) && ([ "$2" = "" ]); then
             --embed-size ${embed_size} --batch-size ${batch_size} \
             --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size 50
-			  # >logs/MCG_inc_${embed_size}_50_3_2_0/output
-			  break
     done
 fi;
 
@@ -59,13 +57,11 @@ if ([ "$1" = "embed_size" ]) && ([ "$2" = "glove" ]); then
             --embed-size ${embed_size} --batch-size ${batch_size} \
             --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size 50
-        # >logs/MCG_inc_${embed_size}_50_3_2_0/output
-        break
     done
 fi;
 
 if ([ "$1" = "hidden_size" ]) && ([ "$2" = "glove" ]); then
-    for hidden_size in 50 300 500; do
+    for hidden_size in 300 500; do
         echo $hidden_size
         echo $batch_size
         python main.py ${sbatch} --num-workers ${workers}\
@@ -86,12 +82,26 @@ if [ "$1" = "threshold" ]; then
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
-            --vocab-file vocab_${threshold}_CaptionsClean_nopunc_t.pkl \
+            --vocab-file "vocab_${thresh}_CaptionsClean_nopunc_t.pkl" \
+            --pretrained-embed g \
             -e ${epochs} --device ${device} --random-seed ${seed}\
             --embed-size 300 --batch-size ${batch_size} \
             --lstm-layers 3 \
-            --num-samples ${num_samples} --debug --hidden-size ${hidden_size}
-        break
+            --num-samples ${num_samples} --debug --hidden-size 50
+    done
+fi;
+
+if [ "$1" = "layers" ]; then
+    for layers in 2 4; do
+        python main.py ${sbatch} --num-workers ${workers}\
+            -t --data-dir ${data_dir} \
+            -cf 'CaptionsClean_nopunc_-1_t_s.txt' \
+            --vocab-file "vocab_2_CaptionsClean_nopunc_t.pkl" \
+            --pretrained-embed g \
+            -e ${epochs} --device ${device} --random-seed ${seed}\
+            --embed-size 300 --batch-size ${batch_size} \
+            --lstm-layers ${layers} \
+            --num-samples ${num_samples} --debug --hidden-size 50
     done
 fi;
 

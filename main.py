@@ -45,7 +45,7 @@ class Main(object):
         self.lstm_layers = self.args.lstm_layers
         self.pretrained_embed = self.args.pretrained_embed
 
-        self.v_thresh = 2
+        self.vthresh = int(self.vocab_file.split('_')[1])
 
         self.device = self.args.device
         self.debug = self.args.debug
@@ -114,6 +114,8 @@ class Main(object):
 
         # Vocabulary arguments
         parser.add_argument('--vocab-file', help='Vocabulary File')
+        parser.add_argument('--vthresh', default=2,
+                            help='Vocabulary word discard threshold')
         parser.add_argument('--pretrained-embed', choices=['g', 't'],
                            help='Use pretrained embedding', default=None)
 
@@ -244,7 +246,7 @@ class Main(object):
         if not self.gen:
 
             vocab_file_name = "vocab_{}_CaptionsClean_nopunc_t.pkl"
-            vocab_file_name = vocab_file_name.format(self.v_thresh)
+            vocab_file_name = vocab_file_name.format(self.vthresh)
             sbatch_lines.append(
                 "   --vocab-file {} \\".format(vocab_file_name)
             )
@@ -257,7 +259,8 @@ class Main(object):
             )
             sbatch_lines.append(
                 "   "\
-                "--embed-size {:d} --batch-size {:d} --lstm-layers 3 \\".format(
+                "--embed-size {:d} --batch-size {:d} "
+                "--lstm-layers {:d} \\".format(
                     self.embed_size, self.batch_size, self.lstm_layers
                 )
             )
@@ -336,7 +339,7 @@ class Main(object):
             title = 'MCG_{:s}_{:d}_{:d}_{:d}_{:d}_{:s}'.format(
                 self.encoder_type, self.embed_size,
                 self.hidden_size, self.lstm_layers,
-                self.v_thresh,
+                self.vthresh,
                 self.pretrained_embed if self.pretrained_embed else '0')
             print(title)
         return title
@@ -424,7 +427,6 @@ class Main(object):
                     'encoder': deepcopy(self.encoder.state_dict()),
                     'decoder': deepcopy(self.decoder.state_dict())
                 }
-                print(os.path.join('logs', self.title))
                 for model in ['encoder', 'decoder']:
                     torch.save(
                         {key: val.cpu() for key, val in
