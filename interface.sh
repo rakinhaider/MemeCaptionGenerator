@@ -73,12 +73,11 @@ if ([ "$1" = "hidden_size" ]) && ([ "$2" = "glove" ]); then
             --embed-size 300 --batch-size ${batch_size} \
             --lstm-layers 3 \
             --num-samples ${num_samples} --debug --hidden-size ${hidden_size}
-        break
     done
 fi;
 
 if [ "$1" = "threshold" ]; then
-    for thresh in 2 3 4; do
+    for thresh in 3 4; do
         python main.py ${sbatch} --num-workers ${workers}\
             -t --data-dir ${data_dir} \
             -cf 'CaptionsClean_nopunc_-1_t_s.txt' \

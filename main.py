@@ -389,17 +389,19 @@ class Main(object):
             images.to(self.device)
             captions.to(self.device)
             lengths.to(self.device)
-            features = self.encoder(images)
-            prediction = self.decoder(features, captions, lengths)
-            targets = pack_padded_sequence(captions,
+            lengths = lengths - 1
+            targets = pack_padded_sequence(captions[:, 1:],
                                            lengths,
                                            batch_first=True,
                                            enforce_sorted=False)
+            captions = captions[:, :-1]
+            features = self.encoder(images)
+            prediction = self.decoder(features, captions, lengths)
             loss = self.criterion(prediction, targets.data)
-            batch_loss += loss
             loss.backward()
             self.optimizer.step()
             self.step += 1
+            batch_loss += loss.detach()
             print('Step {}/{} of mini-batch, Loss {}'.format(
                 self.step, len(self.loader) * (self.num_epochs + 1), loss
             ), flush=True)

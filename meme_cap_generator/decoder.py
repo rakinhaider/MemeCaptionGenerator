@@ -43,8 +43,6 @@ class Decoder(nn.Module):
                     embedding[i][:] = glove[glove_index][:]
                 else:
                     embedding[i][:] = torch.rand(1, self.embed_size)[0]
-                if w == 'the':
-                    print(embedding[i])
             assert embedding.shape == torch.Size([self.vocab.length,
                                                   self.embed_size])
         elif embed == 't':
